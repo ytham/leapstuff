@@ -1,0 +1,43 @@
+<% content_for :chart do %>
+  <%= render 'chart' %>
+<% end %>
+
+<center><div id="chart"></div></center>
+
+<script type="text/javascript" src="/assets/d3.v3.min.js"></script>
+<script type="text/javascript">
+var canvas = d3.select("#chart")
+  .append("svg")
+  //.data(dataset)
+  .attr("width", "100%")
+  .attr("height","100%");
+
+var randomCircles;
+
+function drawRandom() {
+  console.log("DrawRandom");
+  var range = Math.floor(Math.random() * (15 - 8 + 1)) + 5; // 8 to 15
+  var randomData = d3.range(0,range);
+  console.log(randomData);
+  //for(var i = 0; i < range; i++) {
+    randomCircles = d3.select("#chart")
+      .data(randomData)
+      .enter()
+      .append("circle")
+      .style("class", "bgcircle")
+      .style("fill", "white")
+      .style("opacity", 0)
+      .attr("cx", "50%")
+      .attr("cy", "50%")
+      .attr("r", 0)
+      .transition()
+        .attr("cx", (Math.random() * 100).toString() + "%")
+        .attr("cy", (Math.random() * 100).toString() + "%")
+        .attr("r", ((Math.random() * (10 - 2 + 1)) + 2).toString() + "%")
+        .style("fill", "red")
+        .style("opacity", 0.5);
+  //}
+}
+
+drawRandom();
+</script>

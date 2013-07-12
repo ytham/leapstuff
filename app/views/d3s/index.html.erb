@@ -1,0 +1,13 @@
+<% content_for :d3s do %>
+  <%= render 'd3s' %>
+<% end %>
+
+<center><div id="viz"></div></center>
+<script type="text/javascript" src="/assets/d3.v3.min.js"></script>
+<script type="text/javascript">
+var p = d3.select("#viz")
+  .append("svg")
+  //.data(dataset)
+  .attr("width", "100%")
+  .attr("height","100%");
+</script>

@@ -1,0 +1,71 @@
+<script src="/assets/leap.js"></script>
+<script type="text/javascript">
+var controller = new Leap.Controller({enableGestures: true});
+Leap.loop({enableGestures: true}, function(frame) {
+  var fingers = [];
+  var x = [];
+  var y = [];
+  var z = [];
+  var vx = [];
+  var vy = [];
+  var vz = [];
+  var numFingers = frame.pointables.length;
+  
+  for(var i = 0; i < frame.pointables.length; i++) {
+    fingers[i] = frame.pointables[i];
+    x[i] = 50+0.2*fingers[i].tipPosition.x.toString() + "%";
+    y[i] = 100-0.2*fingers[i].tipPosition.y.toString() + "%";
+    z[i] = fingers[i].tipPosition.z;
+    vx[i] = fingers[i].tipVelocity.x;
+    vy[i] = fingers[i].tipVelocity.y;
+    vz[i] = fingers[i].tipVelocity.z;
+
+    draw(x[i],y[i],z[i],vx[i],vy[i],vz[i]);
+    //if collide()
+    if(frame.gestures.length > 0) {
+      console.log("Gestures: " + frame.gestures.length.toString());
+      d3.selectAll(".bgcircle")
+        .style("fill", d3.rgb(Math.floor(Math.random()*255),255,0));
+    }
+  }
+  //console.log("[" + vx[0] + ", " + vy[0] + ", " + vz[0] + "]");
+
+});
+
+function draw(x,y,z,vx,vy,vz) {
+  canvas.append("circle")
+    .style("fill", "white")
+    .style("opacity", 0.25)
+    .attr("cx", x)
+    .attr("cy", y)
+    .attr("r", 0)
+    .transition()
+      .attr("x", (x + 10*vx))
+      .attr("y", (y + 10*vy))
+      .attr("r", (Math.abs(vx)+Math.abs(vy))/4)
+      .style("opacity", 0)
+      .style("fill", d3.rgb(vx,vy,vz))
+      .each("end", function () {
+        d3.select(this)
+          .remove();
+      });
+}
+
+function distance(x,y) {
+  return Math.sqrt(square(x.x - y.x) + square(x.y - y.y));
+}
+
+function square(x) {
+  return x*x;
+}
+
+function collide(a,b) {
+  var dist = distance(a,b) - a.r - b.r;
+  if(dist <= 0) {
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+</script>

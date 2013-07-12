@@ -1,0 +1,91 @@
+<script src="/assets/leap.js"></script>
+<script type="text/javascript">
+var controller = new Leap.Controller({enableGestures: true});
+var begin = true;
+var begin_x;
+var begin_y;
+var rect_id = 0;
+
+Leap.loop({enableGestures: true}, function(frame) {
+  var fingers = [];
+  var x = [];
+  var y = [];
+  var z = [];
+  var vx = [];
+  var vy = [];
+  var vz = [];
+  var numFingers = frame.pointables.length;
+
+  if(frame.pointables.length > 0) {
+    finger = frame.pointables[0];
+    var x = 50+0.2*finger.tipPosition.x;//.toString() + "%";
+    var y = 100-0.3*finger.tipPosition.y;//.toString() + "%";
+    var z = finger.tipPosition.z;
+    var vx = finger.tipVelocity.x;
+    var vy = finger.tipVelocity.y;
+    var vz = finger.tipVelocity.z;
+
+    cursor(x,y,z,vx,vy,vz);
+    
+    if(begin === true) {
+      document.body.style.background = "#000000";
+    } else {
+      document.body.style.background = "#333333"; 
+    }
+
+    if(frame.gestures.length > 0) {
+      if(frame.gestures[0].type === "keyTap" || frame.gestures[0].type === "screenTap") {
+        if(begin === true) {
+          startRect(x,y,z);
+          begin = false;
+        } else {
+          endRect(x,y,z,vx,vy,vz);
+          rect_id++;
+          begin = true;
+        }
+      }
+      //d3.selectAll(".bgcircle")
+      //  .style("fill", d3.rgb(Math.floor(Math.random()*255),255,0));
+    }
+  }
+});
+
+function cursor(x,y,z,vx,vy,vz) {
+  canvas.append("circle")
+    .attr("fill", d3.rgb(255-z*2,255-z*2,255-z*2))
+    .attr("cx", x.toString() + "%")
+    .attr("cy", y.toString() + "%")
+    .attr("r", 10)
+    .style("opacity", 0.5)
+    .transition()
+    .each("end", function() {
+      d3.select(this)
+        .remove();
+    });
+}
+
+function startRect(x,y,z) {
+  console.log("Start");
+  canvas.append("rect")
+    .attr("fill", "white")
+    .attr("id", "rect" + rect_id.toString())
+    .attr("x", x.toString() + "%")
+    .attr("y", y.toString() + "%")
+    .attr("height", 5)
+    .attr("width", 5);
+  begin_x = x;
+  begin_y = y;
+}
+
+function endRect(x,y,z,vx,vy,vz) {
+  console.log("End: #" + rect_id.toString());
+
+  d3.select("#rect" + rect_id.toString())
+    .attr("fill", d3.rgb(255-z*2,255-z*2,255-z*2))
+    .attr("x", function() { return x < begin_x ? x.toString()+"%" : begin_x.toString()+"%" })
+    .attr("y", function() { return y < begin_y ? y.toString()+"%" : begin_y.toString()+"%" })
+    .attr("width",  Math.abs(begin_x - x).toString() + "%")
+    .attr("height", Math.abs(begin_y - y).toString() + "%");
+}
+
+  </script>

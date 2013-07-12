@@ -1,0 +1,52 @@
+<div id="chart"></div>
+
+<script src="/assets/d3.v3.min.js"></script>
+<script type="text/javascript">
+var dataset = [20, 70, 150, 280, 390, 550, 800];
+var lowerbound = 0;
+var upperbound = 1000;
+
+setInterval(function() {
+  var value = Math.floor(Math.random()*upperbound);
+  //console.log("Data: " + value + " | " + dataset[0] + ", " + dataset[dataset.length-1]);
+  dataset.push(value);
+  //dataset.shift();
+}, 700);
+
+setInterval(function() {
+  update();
+}, 1200);
+
+var chart = d3.select("#chart")
+              .append("svg")
+              .style("background", "#111111")
+              .attr("width", "100%")
+              .attr("height", "100%");
+
+
+function update() {
+  var circle = chart.selectAll("circle")
+               .data(dataset);
+
+  circle.enter()
+        .insert("circle")
+        .attr("cx", "50%")
+        .attr("cy", "50%")
+        .attr("r", 10)
+        .style("opacity", 0)
+        .style("fill", "white")
+        .transition()
+          .duration(1200)
+          .attr("cx", function(d) { return convertToPercent(d); })
+          .attr("cy", function() { return (Math.floor(Math.random()*100)).toString() + "%" })
+          .style("fill", "green")
+          .style("opacity", 0.75);
+
+  //circle.exit()
+    //    .remove();
+}
+
+function convertToPercent(value) {
+  return (100*(1-(upperbound-value)/upperbound)).toString() + "%";
+}
+</script>

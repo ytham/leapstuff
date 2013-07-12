@@ -1,0 +1,421 @@
+<%= content_for :threejs do %>
+  <%= render 'threejs' %>
+<% end %>
+
+<div id="container"></div>
+
+<script src="/assets/three.min.js"></script>
+<script src="/assets/leap.js"></script>
+<script defer="defer">
+// Variables
+var particleCount = 1000;
+var obstacleSpawnPercentage = 20;
+var health = 100;
+var firstFrame = true;
+
+// Player variables
+var fingerSize = 20;
+var cursorOffset = 400;
+var shotVelocity = 60;
+
+// Obstale variables
+var obstacleSize = 20;
+
+// Star Field
+var particles = new THREE.Geometry(),
+    pMaterial = new THREE.ParticleBasicMaterial({
+      color: 0xffffff,
+      size: 20,
+      map: THREE.ImageUtils.loadTexture("/assets/star.png"),
+      blending: THREE.AdditiveBlending,
+      transparent: true
+    });
+
+// Background Space
+var skyBoxGeometry = new THREE.SphereGeometry(4000, 32, 16);
+var skyBoxMaterial = new THREE.MeshBasicMaterial({map: THREE.ImageUtils.loadTexture("/assets/nebula2.jpg"), side: THREE.BackSide});
+var space = new THREE.Mesh(skyBoxGeometry, skyBoxMaterial);
+
+// create particles
+for(var p = 0; p < particleCount; p++) {
+  var pX = Math.random() * 2000 - 1000, // Random # between -250 & +250
+      pY = Math.random() * 2000 - 1000,
+      pZ = Math.random() * 2000 - 1000,
+      particle = new THREE.Vector3(pX,pY,pZ);
+  particles.vertices.push(particle);  // Push each particle to THREE.Geometry()
+}
+
+var particleSystem = new THREE.ParticleSystem(particles, pMaterial);
+particleSystem.sortParticles = true;
+particle.velocity = new THREE.Vector3(0,0,1);
+
+// leap variables
+var x = [], y = [], z = [], xangle = [], yangle = [], zangle = [];
+var x_hand = [], y_hand = [], z_hand = [], xAngle_hand = [], yAngle_hand = [], zAngle_hand = [];
+var x_n = [], y_n = [], z_n = [];
+var cubeFinger = [];
+var cube;
+var numFingers = 0, numFingers_last = 0;
+var shooting = false;
+var shot = [];
+var obstacle = [];
+var obstacleId = 0;
+var obstacleVel = [];
+var cubeCollider = [];
+var fingerCollider = [];
+
+
+// leap motion
+var controller = new Leap.Controller({enableGestures: true});
+Leap.loop({enableGestures: true}, function(frame) {
+  var hand = [];
+  var handId;
+  if(frame.hands.length > 0) {
+    for(var i = 0; i < frame.hands.length; i++) {
+      hand[i] = frame.hands[i]; 
+      x[i] = hand[i].palmPosition.x;
+      y[i] = hand[i].palmPosition.y;
+      z[i] = hand[i].palmPosition.z;
+      xangle[i] = hand[i].rotation.yBasis.z*2;
+      yangle[i] = hand[i].rotation.xBasis.z*2;
+      zangle[i] = hand[i].rotation.xBasis.y*2;
+      x_n[i] = hand[i].direction.x;
+      y_n[i] = hand[i].direction.y;
+      //z_n[i] = hand[i].direction.z;
+      /*
+      x_n[i] = 1.25*hand[i].palmNormal.x;
+      y_n[i] = 1.25*hand[i].palmNormal.y;*/
+      z_n[i] = 1.25*hand[i].palmNormal.z;
+      //console.log("Normal: [ " + x_n[i] + ", " + y_n[i] + ", " + z_n[i] + "]");
+      //console.log(i.toString() + ": " + frame.pointables.length.toString());
+    }
+
+    // Assign positions to the fingers
+    var finger = [];
+    numFingers = frame.pointables.length;
+    for(var i = 0; i < numFingers; i++) {
+      finger[i] = frame.pointables[i];
+      x_hand[i] = finger[i].tipPosition.x;
+      y_hand[i] = finger[i].tipPosition.y;
+      z_hand[i] = finger[i].tipPosition.z;
+      xAngle_hand[i] = 2.5*finger[i].direction.y;
+      yAngle_hand[i] = 2.0*finger[i].direction.x;
+      zAngle_hand[i] = 10*finger[i].direction.z;
+    }
+  }
+
+  document.onkeydown = function(evt) {
+    if(evt.keyCode === 32) {
+      shooting = true;
+      console.log("Shooting true");
+    }
+  }
+
+  document.onkeyup = function() {
+    shooting = false;
+  }
+  /*if(frame.gestures.length > 0) {
+    if(frame.gestures[0].type === "keyTap" || frame.gestures[0].type === "screenTap") {
+      shooting = true;
+    }
+    else {
+      shooting = false;
+    }
+  }*/
+});
+
+
+
+
+function move() {
+
+  // Fingers
+  if(numFingers > numFingers_last) {  // More fingers than last frame
+    //var difference = numFingers - numFingers_last;
+    for(i = numFingers_last; i < numFingers; i++) {
+        cubeFinger[i] = new THREE.Mesh(new THREE.SphereGeometry(fingerSize,16,8), new THREE.MeshBasicMaterial({
+            wireframe: true,
+            color: 0x0099FF
+          }));
+      scene.add(cubeFinger[i]);
+      fingerCollider.push(cubeFinger[i]);
+      //console.log("Added Finger: " + i.toString());
+    }
+  } else if(numFingers < numFingers_last) {  // Less fingers than last frame
+    for(i = numFingers; i < numFingers_last; i++) {
+      scene.remove(cubeFinger[i]);
+      fingerCollider.pop(cubeFinger[i]);
+      //console.log("Removed Finger: " + i.toString());
+    }
+  } else {
+    // Do nothing
+  }
+
+  for(i = 0; i < numFingers; i++) {
+    cubeFinger[i].position.x = x_hand[i]*3;
+    cubeFinger[i].position.y = -300+y_hand[i]*2;
+    cubeFinger[i].position.z = -300+z_hand[i]*3;
+    cubeFinger[i].rotation.x = xAngle_hand[i];
+    cubeFinger[i].rotation.y = -yAngle_hand[i];
+    cubeFinger[i].rotation.z = zAngle_hand[i];
+  }
+
+  // player position
+  cube.position.x = x[0]*3;
+  cube.position.y = -300+y[0]*2;
+  cube.position.z = -100+z[0]*3;
+
+
+  anglex = Math.asin(x_n[0]);
+  angley = Math.asin(y_n[0]);
+  //anglez = Math.asin(z_n[0])+1.5708;
+  cube.rotation.x = angley;
+  cube.rotation.y = -anglex;
+  cube.rotation.z = z_n[0];
+
+
+  // camera tracks the ship
+  camera.position.x = cube.position.x/2;
+  camera.position.y = cube.position.y/2;
+  camera.position.z = cube.position.z/2 + 400;
+  //camera.lookAt(new THREE.Vector3(0,0,0));
+  
+  //cube.rotation.x = -xangle[0];
+  //cube.rotation.y = yangle[0];
+  //cube.rotation.z = -zangle[0];
+
+  // targetting cursors
+  target1.position.x = cube.position.x+x_n[0]*cursorOffset;
+  target1.position.y = cube.position.y+y_n[0]*cursorOffset;
+  target1.position.z = -100-cursorOffset+cube.position.z;
+  target2.position.x = cube.position.x+x_n[0]*2*cursorOffset;
+  target2.position.y = cube.position.y+y_n[0]*2*cursorOffset;
+  target2.position.z = -100+2-cursorOffset+cube.position.z;
+
+  
+  var pCount = particleCount;
+  while(pCount--) {
+    var particle = particles.vertices[pCount];
+
+    //particle.velocity.z -= 1;
+    particle.z += Math.random()*80+1;
+    if(particle.z > 500) {
+      particle.z = Math.random()*2000 - 1000;
+    }
+  }
+
+  //particleSystem.rotation.z = cursorX/1000;
+  //particleSystem.rotation.x = cursorY/1000;
+  //particleSystem.rotation.y += 0.002;
+  //particleSystem.rotation.z += 0.005;
+/*
+  particleSystem.position.x = x[1]*3;
+  particleSystem.position.y = y[1]*3;
+  particleSystem.position.z = z[1]*3;
+  particleSystem.rotation.x = -yangle[1];
+  particleSystem.rotation.y = zangle[1];
+  particleSystem.rotation.z = xangle[1];
+*/
+
+  // Create random obstacles
+  var obstacleSpawnValue = Math.random()*100;
+  if(obstacleSpawnValue < obstacleSpawnPercentage) {
+    spawnObstacle();
+    obstacleId++;
+  }
+
+  cube.material.color.setHex(0x00AAFF);
+
+  if(obstacle.length > 0) {
+    for(i = 0; i < obstacleId; i++) {
+      obstacle[i].position.z += obstacleVel[i][2];
+      obstacle[i].position.x += obstacleVel[i][0];
+      obstacle[i].position.y += obstacleVel[i][1];
+
+      var ray = new THREE.Raycaster(obstacle[i].position, new THREE.Vector3(obstacleVel[i][0], obstacleVel[i][1], obstacleVel[i][2]).normalize());
+      var intersect_cube = ray.intersectObjects(cubeCollider);
+      var intersect_finger = ray.intersectObjects(fingerCollider);
+      if (i === obstacle.length - 1) {
+        //console.log("Obstacle vector: " + obstacleVel[i][0].toString() + ", " + obstacleVel[i][1].toString() + ", " + obstacleVel[i][2]);
+      }
+
+
+      if(intersect_cube.length > 0) {
+        console.log(intersect_cube.length + " | CUBE DTC: " + intersect_cube[0].distance);
+        if (intersect_cube[0].distance < 50) {
+          cube.material.color.setHex(0xFF0000);
+          obstacle[i].material.color.setHex(0xFFFF00);
+          console.log("Collide! [" + i + "] - Dist: " + intersect_cube[0].distance);
+          health--;
+          obstacle[i].scale.x = 10;
+          obstacle[i].scale.y = 10;
+          obstacle[i].scale.z = 10;
+          scene.remove(obstacle[i]);
+          //obstacleVel[i][2] = -obstacleVel[i][2];
+        }
+      }
+
+      if(intersect_finger.length > 0) { 
+        console.log(intersect_finger.length +  " | DTF: " + intersect_finger[0].distance);
+        if (intersect_finger[0].distance < 50) { 
+          //cube.material.color.setHex(0x00FF00);     
+          console.log("Finger Collide! [" + i + "] - Dist: " + intersect_finger[0].distance);
+          obstacle[i].material.color.setHex(0x00FF00);
+          obstacle[i].scale.x = 10;
+          obstacle[i].scale.y = 10;
+          obstacle[i].scale.z = 10;
+          //console.log("Finger Collide! [" + i + "]");
+          scene.remove(obstacle[i]);
+          //obstacleVel[i][2] = -obstacleVel[i][2];
+        }
+      }
+    }
+  }
+
+
+  if(shooting === true) {
+    var newShot = new THREE.Mesh(new THREE.SphereGeometry(10,5,5), new THREE.MeshPhongMaterial({
+          specular: 0xFFFFFF,
+          color: 0x00FF00,
+          emissive: 0x003300,
+          shininess: 100,
+          trasparency: true,
+          opacity: 50  
+        }));
+
+    newShot.position.x = cube.position.x;
+    newShot.position.y = cube.position.y;
+    newShot.position.z = cube.position.z;
+
+    newShot.velocity = {
+      x: shotVelocity*x_n[0],
+      y: shotVelocity*y_n[0],
+      z: -1*shotVelocity
+    }
+
+    shot.push(newShot);
+    scene.add(newShot);
+    //console.log(newShot);
+  }
+
+  for(var i = 0; i < shot.length; i++) {
+    if(shot[i]) {
+      shot[i].position.x += shot[i].velocity.x;
+      shot[i].position.y += shot[i].velocity.y;
+      shot[i].position.z += shot[i].velocity.z;
+    }
+    if(shot[i].position.z < -3000) {
+      scene.remove(shot[i])
+    }
+  }
+  
+
+  if(!firstFrame) {
+    document.getElementById("health").innerHTML = health;
+  }
+
+
+  numFingers_last = numFingers;
+  firstFrame = false;
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(function(){
+      move();
+  });
+}
+
+function spawnObstacle() {
+  /*obstacle[obstacleId] = new THREE.Mesh(new THREE.SphereGeometry(obstacleSize,obstacleSize,obstacleSize), new THREE.MeshPhongMaterial({
+        specular: 0xFFFFFF,
+        color: 0xFF5500,
+        emissive: 0x222222,
+        shininess: 20
+      }));*/
+  obstacle[obstacleId] = new THREE.Mesh(new THREE.CubeGeometry(Math.random()*300-100,30,30), new THREE.MeshPhongMaterial({
+  specular: 0xFFFFFF,
+  color: 0xFF9900,
+  emissive: 0x222222,
+  shininess: 50  
+  }));
+  obstacle[obstacleId].rotation.x = Math.random();
+  obstacle[obstacleId].rotation.y = Math.random()*2-1;
+  obstacle[obstacleId].rotation.z = Math.random()*2-1;
+  scene.add(obstacle[obstacleId]);
+
+  obstacle[obstacleId].position.x = Math.random()*200 - 100;
+  obstacle[obstacleId].position.y = Math.random()*200 - 100;
+  obstacle[obstacleId].position.z = -2000 + Math.random()*200 - 100;
+
+  //obstacleVel[obstacleId] = [Math.random()*2 - 1, Math.random()*2 - 1, 2];
+  obstacleVel[obstacleId] = [Math.random()*6 - 3, Math.random()*6 - 3, 15 + Math.random()*15 - 5];
+}
+
+// renderer
+var renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// camera
+var camera = new THREE.PerspectiveCamera(35, window.innerWidth/window.innerHeight, 1, 5000);
+camera.position.y = 0;
+camera.position.z = 500;
+//camera.rotation.x = 45 * (Math.PI / 180);
+
+// light source
+var light = new THREE.DirectionalLight(0xFFFFFF);
+light.position.set(1,1,1).normalize();
+var light2 = new THREE.PointLight(0xFFFFFF);
+light2.position.set(-2900,0,0);
+
+// scene
+var scene = new THREE.Scene();
+
+// cube
+var cube = new THREE.Mesh(new THREE.CubeGeometry(80,15,80), new THREE.MeshPhongMaterial({
+  specular: 0xFFFFFF,
+  color: 0x0099FF,
+  emissive: 0x222222,
+  shininess: 100  
+}));
+
+  /*new THREE.MeshPhongMaterial({
+  specular: 0xFFFFFF,
+  color: 0x0099FF,
+  emissive: 0x003355,
+  shininess: 100  
+}));*/
+cube.overdraw = true;
+cubeCollider.push(cube);
+//THREE.Collisions.colliders.push(THREE.CollisionUtils.MeshOBB(cube));
+
+// targetting cursors
+var target1 = new THREE.Mesh(new THREE.CubeGeometry(20,20,1), new THREE.MeshBasicMaterial({
+  wireframe: true,
+  color: 0x00FF00
+}));
+
+var target2 = new THREE.Mesh(new THREE.CubeGeometry(20,20,1), new THREE.MeshBasicMaterial({
+  wireframe: true,
+  color: 0x00FF00
+}));
+
+scene.add(light);
+scene.add(light2);
+scene.add(cube);
+scene.add(particleSystem);
+scene.add(space);
+scene.add(target1);
+scene.add(target2);
+
+// animate
+//animate();
+move();
+
+
+// render
+renderer.render(scene, camera);
+
+</script>
+<div id="ponghud">
+  Health: <span id="health">100</span>
+</div>

@@ -1,0 +1,16 @@
+// Place all the styles related to the d3s controller here.
+// They will automatically be included in application.css.
+// You can use Sass (SCSS) here: http://sass-lang.com/
+
+.chart {
+  background: #fff;
+  border: 1px solid #aaa;
+  position: relative;
+  width: 500px;
+}
+
+.chart circle.small {
+  fill: #aaa;
+  stroke: #666;
+  stroke-width: 1.5px;
+}

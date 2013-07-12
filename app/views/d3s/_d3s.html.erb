@@ -1,0 +1,62 @@
+<script src="/assets/leap.js"></script>
+<script type="text/javascript">
+var dataset = [];
+
+var controller = new Leap.Controller({enableGestures: true});
+Leap.loop(function(frame) {
+  var x = [];
+  var y = [];
+  var z = [];
+  var hand = [];
+  if(frame.hands.length < 2) {
+    return;
+  }
+  for(var i = 0; i < frame.hands.length; i++) {
+    hand[i] = frame.hands[i];
+    //x[i] = 450+2*hand[i].palmPosition.x;
+    //y[i] = 600-2*hand[i].palmPosition.y;
+    x[i] = 50-0.2*hand[i].palmPosition.x.toString() + "%";
+    y[i] = 100-0.2*hand[i].palmPosition.y.toString() + "%";
+    z[i] = Math.abs(hand[i].palmPosition.z);
+  }
+
+  // Add data to dataset
+  //dataset += x;
+  
+  /*d3.select("circle")
+    .attr("cx", x+300)
+    .attr("cy", y+400)
+    .attr("r", Math.abs(z-50));
+  */
+  draw(x[0],y[0],z[0],x[1],y[1],z[1]);
+  //cleanup();
+  //test();
+});
+
+function draw(x1,y1,z1,x2,y2,z2) {
+  var color = Math.floor(Math.abs(z1/150)*16777215).toString(16);
+  p.append("circle")
+    .style("fill", "white")
+    .attr("cx", x1)
+    .attr("cy", y1)
+    .attr("r", z1)
+    .style("opacity", 0.1)
+    .transition()
+      .attr("cx", x2)
+      .attr("cy", y2)
+      .attr("r", z2)
+      .style("opacity", 0.9)
+      .style("fill", color)
+      .each("end", function () {
+        d3.select(this)
+          .remove();
+      })
+  //console.log(z2.toString(16));
+}
+
+function cleanup() {
+  p.selectAll("circle")
+    .exit();
+}
+
+</script>

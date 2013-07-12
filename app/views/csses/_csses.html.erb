@@ -1,0 +1,54 @@
+<script src="/assets/leap.js"></script>
+<script type="text/javascript">
+var mouseX;
+var mouseY;
+var xAngle;
+var yAngle;
+var pageX;
+var pageY;
+
+
+var controller = new Leap.Controller({enableGestures: true});
+Leap.loop(function(frame) {
+    var hand = [];
+    var handId;
+    console.log(frame.hands.length);
+    for(handId = 0; handId < frame.hands.length; handId++) {
+      hand[handId] = frame.hands[handId];
+    }
+    //console.log(hand.palmPosition.z);
+    //if(frame.hands.length == 1) {
+      $('.cube')[0].style.webkitTransform = "translateX(" + (hand[0].palmPosition.x*4 + 600) + "px) translateY(" + (hand[0].palmPosition.y*-4 + 1200) + "px) translateZ(" + hand[0].palmPosition.z + "px) rotateX(" + hand[0].rotation.xBasis.x*90 + "deg) rotateY(" + hand[0].rotation.xBasis.y*90 + "deg) rotateZ(" + hand[0].rotation.zBasis.x*90 + "deg)";
+    //}
+    //$('.cube')[0].style.opacity = Math.abs(hand.palmPosition.z/200);
+    //var bgcolor = Math.floor((Math.abs(hand.palmPosition.z)/100)*16777215).toString(16);
+    //document.body.style.backgroundColor = '#'+bgcolor;
+    if(frame.hands.length == 2) {
+      $('.cube2')[0].style.webkitTransform = "translateX(" + (hand[1].palmPosition.x*4 + 600) + "px) translateY(" + (hand[1].palmPosition.y*-4 + 1200) + "px) translateZ(" + hand[1].palmPosition.z + "px) rotateX(" + hand[1].rotation.xBasis.z*90 + "deg) rotateY(" + hand[1].rotation.xBasis.x*90 + "deg) rotateZ(" + hand[1].rotation.xBasis.y*90 + "deg)";
+      console.log("[" + hand[0].palmPosition.y + ", " + hand[1].palmPosition.y + "]");
+    }
+    $('.overlap')[0].style.opacity = Math.abs(hand[0].palmPosition.z/200);
+    //console.log(Math.abs(hand[0].palmPosition.z/100)); 
+
+  //};
+
+});
+$(window).on('mousemove', function(event) {
+  pageX = event.pageX;
+  pageY = event.pageY;
+  var width = $(window).width();
+  mouseX = pageX - (width * 0.5);
+  var height = $(window).height();
+  mouseY = pageY - (height * 0.5);
+  xAngle = (mouseY / height) * 90;
+  yAngle = (mouseX / width) * -90;
+
+  //$('.cube')[0].style.webkitTransform = "rotateX(" + xAngle + "deg) rotateY(" + yAngle + "deg)" + "translateX(" + event.pageX + "px) translateY(" + event.pageY + "px)";
+  //$('.cube')[0].style.webkitTransform = "translateX(" + event.pageX + "px) translateY(" + event.pageY + "px)";
+
+  //navigator.webkitGetUserMedia({audio: true}, function(localMediaStream) {
+  //  var audio = document.querySelector('audio');
+  //  audio.src = window.URL.createObjectURL(localMediaStream);
+  //});
+});
+</script>
